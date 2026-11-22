@@ -1,0 +1,35 @@
+workflows:
+  thelingo_unsigned_ipa:
+    name: THELingo - Unsigned IPA
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      xcode: latest
+    scripts:
+      - name: Download THELingo.zip from GitHub
+        script: |
+          set -e
+          curl -L --fail --retry 3 \
+            https://raw.githubusercontent.com/YaDa42/THELingo/main/THELingo.zip \
+            -o THELingo.zip
+          unzip -q THELingo.zip -d source
+          cd source
+          xcodebuild -project THELingo.xcodeproj \
+            -scheme THELingo \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+          APP_PATH="build/DerivedData/Build/Products/Release-iphoneos/THELingo.app"
+          test -d "$APP_PATH"
+          mkdir -p "$CM_BUILD_DIR/unsigned-ipa/Payload"
+          cp -R "$APP_PATH" "$CM_BUILD_DIR/unsigned-ipa/Payload/THELingo.app"
+          cd "$CM_BUILD_DIR/unsigned-ipa"
+          /usr/bin/zip -qry "$CM_BUILD_DIR/THELingo-unsigned.ipa" Payload
+          echo "Unsigned IPA created: $CM_BUILD_DIR/THELingo-unsigned.ipa"
+    artifacts:
+      - THELingo-unsigned.ipa
